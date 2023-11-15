@@ -12,5 +12,8 @@ $(BIN_DIR)/tar: $(SRC_DIR)/main.c | $(BIN_DIR)
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
+doc:
+	doxygen Doxyfile
+
 clean:
 	rm -f $(BIN_DIR)/tar
