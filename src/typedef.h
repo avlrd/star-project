@@ -2,7 +2,6 @@
 #define TYPEDEF_H
 
 #include <getopt.h>
-#include <stdio.h>
 
 /**
  * Binary options declaration
