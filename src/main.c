@@ -17,13 +17,7 @@ int main(int argc, char** argv)
 
 	char* archive_name = NULL;
 	char* source_dir = NULL;
-	int LF = 0, EF = 0, CF = 0, DF = 0, ZF = 0, VF = 0;
-
-	//TODO delete
-	if(DF==VF)
-	{
-		printf(":)");
-	}
+	int LF = 0, EF = 0, CF = 0, ZF = 0, VF = 0;
 
 	while((opt = getopt_long(argc, argv, optstr, options, &opt_idx)) != -1)
 	{
@@ -31,36 +25,29 @@ int main(int argc, char** argv)
 		switch(opt)
 		{
 			case 'l':
-				printf("list\n");
 				LF = 1;
 				archive_name = optarg;
 				break;
 
 			case 'e':
-				printf("extract\n");
 				EF = 1;
 				archive_name = optarg;
 				break;
 
 			case 'c':
-				printf("create\n");
 				CF = 1;
 				archive_name = optarg;
 				break;
 
 			case 'd':
-				printf("directory\n");
-				DF = 1;
 				source_dir = optarg;
 				break;
 
 			case 'z':
-				printf("compress\n");
 				ZF = 1;
 				break;
 
 			case 'v':
-				printf("verbose\n");
 				VF = 1;
 				break;
 
@@ -78,15 +65,30 @@ int main(int argc, char** argv)
 		}
 	}
 
+	if(VF)
+	{
+		printf("verbose\n");
+	}
+
 	if(LF)
 	{
 		printf("list\n");
+		if(archive_name == NULL)
+		{
+			fprintf(stderr, "No archive specified\n");
+			return 1;
+		}
 		list_archive(archive_name);
 	}
 	else if(EF)
 	{
 		printf("extract\n");
-		extract(archive_name);
+		if(archive_name == NULL)
+		{
+			fprintf(stderr, "No archive specified\n");
+			return 1;
+		}
+		extract_archive(archive_name);
 	}
 	else if(CF)
 	{
@@ -101,6 +103,12 @@ int main(int argc, char** argv)
 	else if(ZF)
 	{
 		printf("compress\n");
+		if(archive_name == NULL)
+		{
+			fprintf(stderr, "No archive specified\n");
+			return 1;
+		}
+		compress_archive(archive_name);
 	}
 	else
 	{
@@ -117,7 +125,7 @@ int octal_to_int(const char *octal) {
 	return strtol(octal, NULL, 8);
 }
 
-void extract(char *archive) {
+void extract_archive(char *archive) {
 	int fd = open(archive, O_RDONLY);
 	if (fd == -1) {
 		perror("open");
@@ -367,6 +375,206 @@ void create_archive(char* archive, char* source)
 
 /*---------------------------------------------------------------------------*/
 
+int compress_archive(char* archive)
+{
+	int ret = Z_OK;
+	z_stream stream = {0};
+	unsigned char in[CHUNK];
+	unsigned char out[CHUNK];
+	FILE *source_file = NULL, *dest_file = NULL;
+	char dest[256];
+
+	// Nom du fichier dest = nom du fichier source + .gz
+	snprintf(dest, sizeof(dest), "%s.gz", archive);
+
+	source_file = fopen(archive, "rb");
+	if (source_file == NULL)
+	{
+		perror("Unable to open source file");
+		return Z_ERRNO;
+	}
+
+	dest_file = fopen(dest, "wb");
+	if (dest_file == NULL)
+	{
+		perror("Unable to open destination file");
+		fclose(source_file); // Clean up source file
+		return Z_ERRNO;
+	}
+
+	// Stream init
+	stream.zalloc = Z_NULL;
+	stream.zfree = Z_NULL;
+	stream.opaque = Z_NULL;
+	ret = deflateInit(&stream, Z_DEFAULT_COMPRESSION);
+	if (ret != Z_OK)
+	{
+		fclose(source_file);
+		fclose(dest_file);
+		return ret;
+	}
+
+	// Lecture et compression
+	while (1)
+	{
+		stream.avail_in = fread(in, 1, CHUNK, source_file);
+		if (ferror(source_file))
+		{
+			deflateEnd(&stream);
+			fclose(source_file);
+			fclose(dest_file);
+			perror("Error reading source file");
+			return Z_ERRNO;
+		}
+
+		int flush = feof(source_file) ? Z_FINISH : Z_NO_FLUSH;
+		stream.next_in = in;
+
+		do
+		{
+			stream.avail_out = CHUNK;
+			stream.next_out = out;
+			ret = deflate(&stream, flush);
+			assert(ret != Z_STREAM_ERROR);
+			size_t have = CHUNK - stream.avail_out;
+			if (fwrite(out, 1, have, dest_file) != have || ferror(dest_file))
+			{
+				deflateEnd(&stream);
+				fclose(source_file);
+				fclose(dest_file);
+				perror("Error writing to destination file");
+				return Z_ERRNO;
+			}
+		} while (stream.avail_out == 0);
+
+		if (flush == Z_FINISH)
+		{
+			break;
+		}
+	}
+
+	deflateEnd(&stream);
+	fclose(source_file);
+	fclose(dest_file);
+
+	// Supprimer le fichier tar
+	if (remove(archive) != 0)
+	{
+		perror("Error removing original file");
+		return Z_ERRNO;
+	}
+
+	return Z_OK;
+}
+
+/*---------------------------------------------------------------------------*/
+
+int decompress_archive(char* archive)
+{
+	char dest[256];
+	strncpy(dest, archive, sizeof(dest) - 1);
+	dest[sizeof(dest) - 1] = '\0';
+
+	// Enlever .gz de la fin du nom du fichier
+	size_t len = strlen(dest);
+	if (len > 3 && strcmp(dest + len - 3, ".gz") == 0)
+	{
+		dest[len - 3] = '\0';
+	}
+	else
+	{
+		fprintf(stderr, "Error: Input file does not have a .gz extension.\n");
+		return Z_DATA_ERROR;
+	}
+
+	FILE *source_file = fopen(archive, "rb");
+	if (!source_file)
+	{
+		perror("Unable to open source file");
+		return Z_ERRNO;
+	}
+
+	FILE *dest_file = fopen(dest, "wb");
+	if (!dest_file)
+	{
+		perror("Unable to open destination file");
+		fclose(source_file);
+		return Z_ERRNO;
+	}
+
+	z_stream stream = {0};
+	stream.zalloc = Z_NULL;
+	stream.zfree = Z_NULL;
+	stream.opaque = Z_NULL;
+	stream.avail_in = 0;
+	stream.next_in = Z_NULL;
+	
+	if (inflateInit2(&stream, 15 + 32) != Z_OK)
+	{
+		fclose(source_file);
+		fclose(dest_file);
+		return Z_MEM_ERROR;
+	}
+
+	int ret;
+	unsigned char in[CHUNK];
+	unsigned char out[CHUNK];
+
+	while (1)
+	{
+		stream.avail_in = fread(in, 1, CHUNK, source_file);
+		if (ferror(source_file))
+		{
+			inflateEnd(&stream);
+			fclose(source_file);
+			fclose(dest_file);
+			return Z_ERRNO;
+		}
+		if (stream.avail_in == 0)
+			break;
+		stream.next_in = in;
+
+		while (stream.avail_in != 0)
+		{
+			stream.avail_out = CHUNK;
+			stream.next_out = out;
+			ret = inflate(&stream, Z_NO_FLUSH);
+			assert(ret != Z_STREAM_ERROR);
+			switch (ret)
+			{
+				case Z_NEED_DICT:
+				case Z_DATA_ERROR:
+				case Z_MEM_ERROR:
+					inflateEnd(&stream);
+					fclose(source_file);
+					fclose(dest_file);
+					return ret;
+			}
+			size_t have = CHUNK - stream.avail_out;
+			if (fwrite(out, 1, have, dest_file) != have || ferror(dest_file))
+			{
+				inflateEnd(&stream);
+				fclose(source_file);
+				fclose(dest_file);
+				return Z_ERRNO;
+			}
+		}
+	}
+
+	inflateEnd(&stream);
+	fclose(source_file);
+	fclose(dest_file);
+
+	if (ret != Z_STREAM_END)
+	{
+		return Z_DATA_ERROR;
+	}
+
+	return Z_OK;
+}
+
+/*---------------------------------------------------------------------------*/
+
 void display_usage(const char* bin_name)
 {
 	fprintf(stderr, "Usage : %s [OPTION...] [FILE]...\n\n", bin_name);
@@ -375,7 +583,7 @@ void display_usage(const char* bin_name)
 	fprintf(stderr, "\t-e,\t--extract\tARCHIVE_FILE\n");
 	fprintf(stderr, "\t-c,\t--create\tARCHIVE_FILE\n");
 	fprintf(stderr, "\t-d,\t--directory\tDIRECTORY_TO_PROCESS\n");
-	fprintf(stderr, "\t-z,\t--compress\n");
+	fprintf(stderr, "\t-z,\t--compress\tARCHIVE_FILE\n");
 	fprintf(stderr, "\t-v,\t--verbose\t: enable *verbose* mode\n");
 	fprintf(stderr, "\t-h,\t--help\t\t: display this help\n\n");
 	fprintf(stderr, "See manual for more details.\n");

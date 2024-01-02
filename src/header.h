@@ -14,6 +14,9 @@
 #include <tar.h>
 #include <sys/sysmacros.h>
 #include <linux/limits.h>
+#include <sys/types.h>
+#include <zlib.h>
+#include <assert.h>
 
 /**
  * Displays the usage of the binary command on the terminal.
@@ -42,7 +45,14 @@ void list_archive(char *archive);
  * 
  * @param archive
 */
-void extract(char *archive);
+void extract_archive(char *archive);
+
+/**
+ * Compresses archive files.
+ * 
+ * @param archive
+*/
+int compress_archive(char *archive);
 
 void debug(const char* msg, ...);
 

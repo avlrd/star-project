@@ -3,6 +3,8 @@
 
 #include <getopt.h>
 
+#define CHUNK 32768
+
 struct posix_header {
 	char name[100];
 	char mode[8];
@@ -36,7 +38,7 @@ static struct option options[] =
 	{ "extract",	required_argument,	0,	'e'},
 	{ "create",		required_argument,	0,	'c'},
 	{ "directory",	required_argument,	0,	'd'},
-	{ "compress",	no_argument,		0,	'z'},
+	{ "compress",	required_argument,	0,	'z'},
 	{ "verbose",	no_argument,		0,	'v'},
 	{ "help",		no_argument,		0,	'h'},
 	{ 0, 			0,					0,	 0 }
@@ -48,6 +50,6 @@ static struct option options[] =
  *
  * \see man 3 getopt_long or getopt
  */ 
-const char* optstr = "l:e:c:d:zvh";
+const char* optstr = "l:e:c:d:z:vh";
 
 #endif

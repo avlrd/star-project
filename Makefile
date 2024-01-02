@@ -10,7 +10,7 @@ OBJS = $(patsubst $(SRC_DIR)/%.c,$(BIN_DIR)/%.o,$(SRCS))
 all: $(BIN_DIR)/tar
 
 $(BIN_DIR)/tar: $(OBJS)
-	$(CC) $(CFLAGS) $^ -o $@ -ltar
+	$(CC) $(CFLAGS) $^ -o $@ -ltar -lz
 
 $(BIN_DIR)/%.o: $(SRC_DIR)/%.c | $(BIN_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
