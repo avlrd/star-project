@@ -2,10 +2,18 @@
 #define HEADER_H
 
 #include <stdio.h>
-#include <libtar.h>
 #include <stdbool.h>
 #include <stdarg.h>
 #include <fcntl.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <limits.h>
+#include <dirent.h>
+#include <tar.h>
+#include <sys/sysmacros.h>
+#include <linux/limits.h>
 
 /**
  * Displays the usage of the binary command on the terminal.
@@ -15,20 +23,27 @@
 void display_usage(const char* bin_name);
 
 /**
- * Prints a debug formatted message, used only for debugging.
- * Works the same as printf.
- *
- * @param msg Debug message
- */
-void debug(const char* msg, ...);
+ * Creates an archive from a directory.
+ * 
+ * @param archive
+ * @param dir
+*/
+void create_archive(char* archive, char* dir);
 
 /**
- * Creates an archive with the given name and files.
+ * Lists archive files.
  * 
- * @param archive_name name of the archive
- * @param files files to add to the archive
- * @param nb_files number of files to add to the archive
+ * @param archive
 */
-void create_archive(char* archive_name, char** files, int nb_files);
+void list_archive(char *archive);
+
+/**
+ * Extracts archive files.
+ * 
+ * @param archive
+*/
+void extract(char *archive);
+
+void debug(const char* msg, ...);
 
 #endif
