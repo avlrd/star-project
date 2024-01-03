@@ -19,6 +19,7 @@ int main(int argc, char** argv)
 	char* source_dir = NULL;
 	int LF = 0, EF = 0, CF = 0, ZF = 0, VF = 0;
 
+	// Parsing des options
 	while((opt = getopt_long(argc, argv, optstr, options, &opt_idx)) != -1)
 	{
 		debug("Option: %c\n", opt);
@@ -45,6 +46,7 @@ int main(int argc, char** argv)
 
 			case 'z':
 				ZF = 1;
+				archive_name = optarg;
 				break;
 
 			case 'v':
@@ -65,11 +67,13 @@ int main(int argc, char** argv)
 		}
 	}
 
+	// Verbose pas encore fait
 	if(VF)
 	{
 		printf("verbose\n");
 	}
 
+	// Processus en fonction des options
 	if(LF)
 	{
 		printf("list\n");
@@ -133,6 +137,7 @@ void extract_archive(char *archive) {
 	}
 
 	struct posix_header header;
+	// On boucle sur les donnees à lire
 	while (read(fd, &header, sizeof(header)) > 0) {
 		if (header.name[0] != '\0') {
 			int size = octal_to_int(header.size);
@@ -153,7 +158,7 @@ void extract_archive(char *archive) {
 				}
 
 				// Copie les données du fichier depuis l'archive vers le fichier créé
-				char buffer[4096];  // Utilisez une taille de bloc plus grande
+				char buffer[4096];
 				int remaining_data = size;
 				while (remaining_data > 0) {
 					int read_size = (remaining_data > (int) sizeof(buffer)) ? (int) sizeof(buffer) : remaining_data;
@@ -289,6 +294,7 @@ void add_elem_to_tar(char *archive, char *name)
 		exit(1);
 	}
 
+	// Remplissage de l'en-tête
 	struct posix_header header;
 	memset(&header, 0, sizeof(header));
 	snprintf(header.name, sizeof(header.name), "%s", name);
@@ -301,7 +307,7 @@ void add_elem_to_tar(char *archive, char *name)
 	snprintf(header.magic, sizeof(header.magic), "ustar");
 	snprintf(header.version, sizeof(header.version), "0");
 
-	// Calculer la somme de contrôle (checksum)
+	// Calculer checksum
 	unsigned int checksum = calculate_checksum(&header);
 	snprintf(header.checksum, sizeof(header.checksum), "%07o", checksum);
 	int fd_archive = open(archive, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH, 0777);
@@ -311,6 +317,7 @@ void add_elem_to_tar(char *archive, char *name)
 	}
 	write(fd_archive, &header, sizeof(header));
 
+	// Copie du contenu du fichier
 	int file_fd = open(name, O_RDONLY);
 	if(header.typeflag == '0')
 		copy_file_contents(file_fd, fd_archive, st.st_size);
@@ -318,7 +325,7 @@ void add_elem_to_tar(char *archive, char *name)
 
 }
 
-void rec(char* archive, char* source)
+void archive_build(char* archive, char* source)
 {
 	add_elem_to_tar(archive, source);
 
@@ -333,17 +340,25 @@ void rec(char* archive, char* source)
 
 	while((entry = readdir(dir)) != NULL)
 	{
-		if(strcmp(entry->d_name, ".") == 0 && strcmp(entry->d_name, "..") != 0)
+		if(strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0)
 		{
 			char file_path[PATH_MAX];
+			snprintf(file_path, sizeof(file_path), "%s/%s", source, entry->d_name);
+
 			if(entry->d_type == DT_DIR)
 			{
-				snprintf(file_path, sizeof(file_path), "%s/%s", source, entry->d_name);
-				rec(archive, file_path);
+				closedir(dir); // on ferme pour éviter le "Too many open files"
+				// on pourrait également créer plusieurs processus pour gérer les différents fichiers
+				archive_build(archive, file_path);
+				dir = opendir(source); // et on réouvre
+				if(!dir)
+				{
+					perror("opendir");
+					exit(1);
+				}
 			}
 			else
 			{
-				snprintf(file_path, sizeof(file_path), "%s/%s", source, entry->d_name);
 				add_elem_to_tar(archive, file_path);
 			}
 		}
@@ -353,7 +368,8 @@ void rec(char* archive, char* source)
 
 void create_archive(char* archive, char* source)
 {
-	rec(archive, source);
+	// Récursion sur les sous-répertoires
+	archive_build(archive, source);
 
 	int archive_fd = open(archive, O_WRONLY | O_APPEND);
 	if(archive_fd == -1)
@@ -406,7 +422,7 @@ int compress_archive(char* archive)
 	stream.zalloc = Z_NULL;
 	stream.zfree = Z_NULL;
 	stream.opaque = Z_NULL;
-	ret = deflateInit(&stream, Z_DEFAULT_COMPRESSION);
+	ret = deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 31, 8, Z_DEFAULT_STRATEGY);
 	if (ret != Z_OK)
 	{
 		fclose(source_file);
