@@ -1,0 +1,46 @@
+.TH STAR 1
+.SH NAME
+Star \- outil de gestion d'archives
+
+.SH SYNOPSIS
+.B ./tar
+[OPTION]... [FICHIER]...
+
+.SH DESCRIPTION
+.P
+Star est une bibliothèque de gestion d'archives tar. Il permet de gérer efficacement des archives tar, offrant des fonctionnalités de création, de listage, d'extraction et de compression.
+
+.SH OPTIONS
+.TP
+.B \-l, \-\-list ARCHIVE_FILE
+Liste le contenu d'une archive.
+
+.TP
+.B \-e, \-\-extract ARCHIVE_FILE
+Extrait les fichiers d'une archive.
+
+.TP
+.B \-c, \-\-create ARCHIVE_FILE
+Crée une nouvelle archive à partir d'un répertoire.
+
+.TP
+.B \-d, \-\-directory DIRECTORY_TO_PROCESS
+Spécifie le répertoire à traiter pour la création de l'archive.
+
+.TP
+.B \-z, \-\-compress ARCHIVE_FILE
+Compresse ou décompresse une archive.
+
+.TP
+.B \-v, \-\-verbose
+Active le mode verbeux.
+
+.TP
+.B \-h, \-\-help
+Affiche l'aide et quitte.
+
+.SH AUTHOR
+Arthur VILLARD et Florian SPINDLER
+
+.SH "SEE ALSO"
+tar(1), gzip(1), bzip2(1)
