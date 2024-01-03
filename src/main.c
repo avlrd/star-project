@@ -17,7 +17,7 @@ int main(int argc, char** argv)
 
 	char* archive_name = NULL;
 	char* source_dir = NULL;
-	int LF = 0, EF = 0, CF = 0, ZF = 0, VF = 0;
+	int LF = 0, EF = 0, CF = 0, ZF = 0, UF = 0, VF = 0;
 
 	// Parsing des options
 	while((opt = getopt_long(argc, argv, optstr, options, &opt_idx)) != -1)
@@ -46,6 +46,11 @@ int main(int argc, char** argv)
 
 			case 'z':
 				ZF = 1;
+				archive_name = optarg;
+				break;
+
+			case 'u':
+				UF = 1;
 				archive_name = optarg;
 				break;
 
@@ -113,6 +118,16 @@ int main(int argc, char** argv)
 			return 1;
 		}
 		compress_archive(archive_name);
+	}
+	else if(UF)
+	{
+		printf("decompress\n");
+		if(archive_name == NULL)
+		{
+			fprintf(stderr, "No archive specified\n");
+			return 1;
+		}
+		decompress_archive(archive_name);
 	}
 	else
 	{
@@ -378,12 +393,16 @@ void create_archive(char* archive, char* source)
 		exit(1);
 	}
 
+	// Ajout de deux blocs de 512 octets remplis de zéros à la fin de l'archive
 	char zero_block[512] = {0};
-	if(write(archive_fd, zero_block, sizeof(zero_block)) != sizeof(zero_block))
+	for(int i = 0; i < 2; i++)
 	{
-		perror("write zero block");
-		close(archive_fd);
-		exit(1);
+		if(write(archive_fd, zero_block, sizeof(zero_block)) != sizeof(zero_block))
+		{
+			perror("write zero block");
+			close(archive_fd);
+			exit(1);
+		}
 	}
 
 	close(archive_fd);
@@ -575,6 +594,13 @@ int decompress_archive(char* archive)
 				return Z_ERRNO;
 			}
 		}
+	}
+
+	// Supprimer le fichier gz
+	if (remove(archive) != 0)
+	{
+		perror("Error removing original file");
+		return Z_ERRNO;
 	}
 
 	inflateEnd(&stream);

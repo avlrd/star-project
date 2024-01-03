@@ -39,6 +39,7 @@ static struct option options[] =
 	{ "create",		required_argument,	0,	'c'},
 	{ "directory",	required_argument,	0,	'd'},
 	{ "compress",	required_argument,	0,	'z'},
+	{ "decompress",	required_argument,	0,	'u'},
 	{ "verbose",	no_argument,		0,	'v'},
 	{ "help",		no_argument,		0,	'h'},
 	{ 0, 			0,					0,	 0 }
@@ -50,6 +51,6 @@ static struct option options[] =
  *
  * \see man 3 getopt_long or getopt
  */ 
-const char* optstr = "l:e:c:d:z:vh";
+const char* optstr = "l:e:c:d:z:u:vh";
 
 #endif

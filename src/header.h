@@ -54,6 +54,13 @@ void extract_archive(char *archive);
 */
 int compress_archive(char *archive);
 
+/**
+ * Decompresses archive files.
+ * 
+ * @param archive
+*/
+int decompress_archive(char *archive);
+
 void debug(const char* msg, ...);
 
 #endif
