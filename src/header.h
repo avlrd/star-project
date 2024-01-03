@@ -1,3 +1,9 @@
+/**
+ * @file header.h
+ * 
+ * @brief This file contains the function prototypes for the functions defined in header.c.
+*/
+
 #ifndef HEADER_H
 #define HEADER_H
 
@@ -18,15 +24,16 @@
 #include <zlib.h>
 #include <assert.h>
 
+
 /**
- * Displays the usage of the binary command on the terminal.
- * 
- * @param bin_name name of the binary
-*/
+ * @brief Displays the usage information for the program.
+ *
+ * @param bin_name The name of the binary file.
+ */
 void display_usage(const char* bin_name);
 
 /**
- * Creates an archive from a directory.
+ * @brief Creates an archive from a directory.
  * 
  * @param archive
  * @param dir
@@ -34,33 +41,45 @@ void display_usage(const char* bin_name);
 void create_archive(char* archive, char* dir);
 
 /**
- * Lists archive files.
+ * @brief Lists archive files.
  * 
  * @param archive
 */
 void list_archive(char *archive);
 
 /**
- * Extracts archive files.
- * 
- * @param archive
-*/
+ * @brief Extracts the contents of an archive.
+ *
+ * This function takes a pointer to a null-terminated string representing the path to the archive file.
+ * It extracts the contents of the archive and saves them to the appropriate location.
+ *
+ * @param archive A pointer to a null-terminated string representing the path to the archive file.
+ */
 void extract_archive(char *archive);
 
 /**
- * Compresses archive files.
+ * @brief Compresses archive files.
  * 
  * @param archive
 */
 int compress_archive(char *archive);
 
 /**
- * Decompresses archive files.
+ * @brief Decompresses archive files.
  * 
  * @param archive
 */
 int decompress_archive(char *archive);
 
+/**
+ * @brief Prints a debug message.
+ *
+ * This function is used to print debug messages to the console.
+ * It takes a format string and optional arguments, similar to printf.
+ *
+ * @param msg The format string for the debug message.
+ * @param ... Optional arguments to be formatted and printed.
+ */
 void debug(const char* msg, ...);
 
 #endif
