@@ -205,43 +205,48 @@ void extract_archive(char *archive) {
 
 /*---------------------------------------------------------------------------*/
 
-int is_end_of_archive(const char *block) {
-	// La condition de fin d'archive est 512 octets remplis de zéros
-	for (int i = 0; i < 512; i++) {
-		if (block[i] != '\0') {
-			return 0;
-		}
-	}
-	return 1;
-}
-
 void list_archive(char *archive) {
-	int fd = open(archive, O_RDONLY);
-	if (fd == -1) {
-		perror("open");
-		exit(1);
-	}
-	struct posix_header header;
+    int fd = open(archive, O_RDONLY);
+    if (fd == -1) {
+        perror("open");
+        exit(EXIT_FAILURE);
+    }
 
-	//Lister les fichiers et répertoire de l'archive
-	while (1) {
-		read(fd, &header, sizeof(header));
+    struct posix_header header;
 
-		if (is_end_of_archive((char *) &header)) {
-			return;
-		}
-		printf("%s \n", header.name);
+    // Fonction pour vérifier la fin de l'archive
+    int is_end_of_archive = 0;
 
-		// On se positionne à la fin du fichier en gérant les fichiers de taille non multiple de 512
-		int filesize = strtol(header.size, NULL, 8);
-		if (filesize % 512 != 0) {
-			filesize = filesize + (512 - (filesize % 512));
-		}
+    while (!is_end_of_archive) {
+        // Lire l'en-tête
+        if (read(fd, &header, sizeof(header)) <= 0) {
+            perror("read");
+            close(fd);
+            exit(EXIT_FAILURE);
+        }
 
-		if (header.typeflag == '0')
-			lseek(fd, filesize, SEEK_CUR);
-	}
+        // Vérifier si c'est la fin de l'archive
+        for (size_t i = 0; i < sizeof(header); i++) {
+            if (((char*)&header)[i] != '\0') {
+                is_end_of_archive = 0;  // Il y a encore des données non nulles
+                break;
+            }
+            is_end_of_archive = 1;  // Tous les octets sont nuls, c'est la fin de l'archive
+        }
 
+        if (!is_end_of_archive) {
+            printf("%s\n", header.name);
+
+            // Calculer la taille du fichier en utilisant strtol
+            int filesize = strtol(header.size, NULL, 8);
+
+            // Gestion des tailles non multiples de 512
+            int padding = (filesize % 512 != 0) ? 512 - (filesize % 512) : 0;
+            lseek(fd, filesize + padding, SEEK_CUR);
+        }
+    }
+
+    close(fd);
 }
 
 /*---------------------------------------------------------------------------*/
